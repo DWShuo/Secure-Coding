@@ -1,15 +1,15 @@
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <string.h>
-#include <stdlib.h>
 #include <stdio.h>
-#include <errno.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
 #include <err.h>
 #include <limits.h>
-#include <unistd.h>
-#include <time.h>
+#include <errno.h>
+#include <string.h>
+
+#define BUFFER_SIZE 1024
 
 static int sec_atoi(const char* str){
     errno = 0;
@@ -30,9 +30,9 @@ static int sec_atoi(const char* str){
     return result;
 }
 
-int main(int argc, char **argv){
+int main (int argc, char *argv[]) {
     int listenfd, connfd;
- 
+
     if (argc != 2){
         printf("usage: ./a.out <port>\n");
         exit(1);
@@ -52,16 +52,21 @@ int main(int argc, char **argv){
     bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
 
     listen(listenfd, 8);
-    while( 1 ){
+
+    while (1) {
         connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
         if (connfd < 0){
             fprintf(stderr, "Could not establish new connection\n");
         }
-        ticks = time(NULL);
-        //snprintf suffers the same problem as the printf family
-        //we can prevent this by manually adding the new line character
-        snprintf(buff, sizeof(buff), "%.24s\r\n", ctime(&ticks));
-        write(connfd, buff, strlen(buff));
-        close(connfd);
+        while (1) {
+            int read = recv(connfd, buff, BUFFER_SIZE, 0);
+
+            if (!read) break; // done reading
+            if (read < 0) fprintf(stderr, "Client read failed\n");
+
+            int rc = send(connfd, buff, read, 0);
+            if (rc < 0) fprintf(stderr, "Client write failed\n");
+        }
     }
+    return 0;
 }
