@@ -10,6 +10,7 @@
 #include <limits.h>
 #include <unistd.h>
 #include <time.h>
+#include <arpa/inet.h>
 
 static int sec_atoi(const char* str){
     errno = 0;
@@ -32,7 +33,8 @@ static int sec_atoi(const char* str){
 
 int main(int argc, char **argv){
     int listenfd, connfd;
- 
+    int pid;
+
     if (argc != 2){
         printf("usage: ./a.out <port>\n");
         exit(1);
@@ -50,18 +52,24 @@ int main(int argc, char **argv){
     servaddr.sin_port = htons(port);
 
     bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
-
     listen(listenfd, 8);
     while( 1 ){
         connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
         if (connfd < 0){
             fprintf(stderr, "Could not establish new connection\n");
         }
-        ticks = time(NULL);
-        //snprintf suffers the same problem as the printf family
-        //we can prevent this by manually adding the new line character
-        snprintf(buff, sizeof(buff), "%.24s\r\n", ctime(&ticks));
-        write(connfd, buff, strlen(buff));
-        close(connfd);
+
+        pid = fork();
+        if(pid == -1){ fprintf(stderr, "forking failed\n"); }
+        if(pid > 0){ close(connfd); }
+        else{
+            ticks = time(NULL);
+            //snprintf suffers the same problem as the printf family
+            //we can prevent this by manually adding the new line character
+            snprintf(buff, sizeof(buff), "%.24s\r\n", ctime(&ticks));
+            write(connfd, buff, strlen(buff));
+            close(connfd);
+        }
     }
+    close(connfd);
 }

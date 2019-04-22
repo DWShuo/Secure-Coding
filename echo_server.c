@@ -32,6 +32,7 @@ static int sec_atoi(const char* str){
 
 int main (int argc, char *argv[]) {
     int listenfd, connfd;
+    int pid;
 
     if (argc != 2){
         printf("usage: ./a.out <port>\n");
@@ -58,15 +59,22 @@ int main (int argc, char *argv[]) {
         if (connfd < 0){
             fprintf(stderr, "Could not establish new connection\n");
         }
-        while (1) {
-            int read = recv(connfd, buff, BUFFER_SIZE, 0);
 
-            if (!read) break; // done reading
-            if (read < 0) fprintf(stderr, "Client read failed\n");
+        pid = fork();
 
-            int rc = send(connfd, buff, read, 0);
-            if (rc < 0) fprintf(stderr, "Client write failed\n");
+        if(pid == -1){ fprintf(stderr, "forking failed\n"); }
+        if(pid > 0){ close(connfd); }
+        else{
+            while (1) {
+                int read = recv(connfd, buff, BUFFER_SIZE, 0);
+
+                if (!read) break; // done reading
+                if (read < 0) fprintf(stderr, "Client read failed\n");
+
+                int rc = send(connfd, buff, read, 0);
+                if (rc < 0) fprintf(stderr, "Client write failed\n");
+            }
         }
     }
-    return 0;
+    close(connfd);
 }
