@@ -1,4 +1,4 @@
-# Secure-coding-project
+# Secure-Coding
 Simple client/servers with secure coding pratices in mind
 
 Daytime Protocol - https://tools.ietf.org/html/rfc867
