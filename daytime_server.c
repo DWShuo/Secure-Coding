@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <arpa/inet.h>
+#include <pwd.h>
 
 static int sec_atoi(const char* str){
     errno = 0;
@@ -29,6 +30,36 @@ static int sec_atoi(const char* str){
         exit(EXIT_FAILURE);
     }
     return result;
+}
+
+int* getNobodyID(){
+    char* username = "nobody";
+    static int returnArray[2];
+    struct passwd *pwd = calloc(1, sizeof(struct passwd));
+    if(pwd == NULL){
+        fprintf(stderr, "Failed to allocate struct passwd for getpwnam_r.\n");
+        exit(1);
+    }
+    size_t buffer_len = sysconf(_SC_GETPW_R_SIZE_MAX) * sizeof(char);
+    char *buffer = malloc(buffer_len);
+    if(buffer == NULL){
+        fprintf(stderr, "Failed to allocate buffer for getpwnam_r.\n");
+        exit(1);
+    }
+    getpwnam_r(username, pwd, buffer, buffer_len, &pwd);
+    if(pwd == NULL){
+        fprintf(stderr, "getpwnam_r failed to find requested entry.\n");
+        exit(1);
+    }
+    returnArray[0] = (int)pwd->pw_uid;
+    returnArray[1] = (int)pwd->pw_gid;
+
+    //printf("uid: %d\n", pwd->pw_uid);
+    //printf("gid: %d\n", pwd->pw_gid);
+
+    free(pwd);
+    free(buffer);
+    return returnArray;
 }
 
 int main(int argc, char **argv){
@@ -63,6 +94,13 @@ int main(int argc, char **argv){
         if(pid == -1){ fprintf(stderr, "forking failed\n"); }
         if(pid > 0){ close(connfd); }
         else{
+            int* IDs = getNobodyID();
+            int UID = IDs[0];
+            int GID = IDs[1];
+            if (setuid(UID) != 0 && setgid(GID) != 0){
+                fprintf(stderr, "Privileges could not be dropped\n");
+                exit(1);
+            }
             ticks = time(NULL);
             //snprintf suffers the same problem as the printf family
             //we can prevent this by manually adding the new line character
