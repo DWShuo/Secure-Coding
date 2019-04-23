@@ -1,0 +1,12 @@
+.TH DAYTIMED 8
+.SH
+daytimed \- Daemon for serving date and time information to connected clients
+.SH SYNOPSIS
+.B daytimed
+[\fIPORT NUMBER\fR]
+.SH DESCRIPTION
+.B daytimed
+Multi-client daemon for serving date and time information to connected clients.
+Daemon should be ran with super user privileges, this is necessary since the daemon relies on setuid and setgid for privilege separation.
+When connecting multiply clients make sure sufficient swap space and system-imposed fork limit are available. 
+To achieve privilege separation the deamon forks a child when performing read and write operations, the fork child has its privileges downgraded by setting its UID and GID to the pseudo-user nobody.
